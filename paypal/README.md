@@ -21,6 +21,3 @@ The dependencies are listed in [functions/package.json](functions/package.json).
   In
 [functions/index.js](functions/index.js) 
 
-```js
-function () { return "This code is highlighted as Javascript!"}
-```
