@@ -17,43 +17,31 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
-const request = require('request-promise');
+admin.initializeApp();
+const translate = require('@google-cloud/translate')();
 
 // List of output languages.
 const LANGUAGES = ['en', 'es', 'de', 'fr', 'sv', 'ga', 'it', 'jp'];
 
 // Translate an incoming message.
-exports.translate = functions.database.ref('/messages/{languageID}/{messageID}').onWrite(event => {
-  const snapshot = event.data;
-  if (snapshot.val().translated) {
-    return;
-  }
-  const promises = [];
-  for (let i = 0; i < LANGUAGES.length; i++) {
-    var language = LANGUAGES[i];
-    if (language !== event.params.languageID) {
-      promises.push(createTranslationPromise(event.params.languageID, language, snapshot));
-    }
-  }
-  return Promise.all(promises);
-});
-
-// URL to the Google Translate API.
-function createTranslateUrl(source, target, payload) {
-  return `https://www.googleapis.com/language/translate/v2?key=${functions.config().firebase.apiKey}&source=${source}&target=${target}&q=${payload}`;
-}
-
-function createTranslationPromise(source, target, snapshot) {
-  const key = snapshot.key;
-  const message = snapshot.val().message;
-  return request(createTranslateUrl(source, target, message), {resolveWithFullResponse: true}).then(
-      response => {
-        if (response.statusCode === 200) {
-          const data = JSON.parse(response.body).data;
-          return admin.database().ref(`/messages/${target}/${key}`)
-              .set({message: data.translations[0].translatedText, translated: true});
+exports.translate = functions.database.ref('/messages/{languageID}/{messageID}').onWrite(
+    (change, context) => {
+      const snapshot = change.after;
+      if (snapshot.val().translated) {
+        return null;
+      }
+      const promises = [];
+      for (let i = 0; i < LANGUAGES.length; i++) {
+        const language = LANGUAGES[i];
+        if (language !== context.params.languageID) {
+          promises.push(async () => {
+            const results = await translate.translate(snapshot.val().message, {from: context.params.languageID, to: language});
+            return admin.database().ref(`/messages/${language}/${snapshot.key}`).set({
+              message: results[0],
+              translated: true,
+            });
+          });
         }
-        throw response.body;
-      });
-}
+      }
+      return Promise.all(promises);
+    });

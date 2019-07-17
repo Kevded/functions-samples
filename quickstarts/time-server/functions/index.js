@@ -22,12 +22,14 @@ const functions = require('firebase-functions');
 // Moments library to format dates.
 const moment = require('moment');
 // CORS Express middleware to enable CORS Requests.
-const cors = require('cors')({origin: true});
+const cors = require('cors')({
+  origin: true,
+});
 // [END additionalimports]
 
 // [START all]
 /**
- * Returns the server's date. You must provide a `format` URL query parameter or `format` vaue in
+ * Returns the server's date. You must provide a `format` URL query parameter or `format` value in
  * the request body with which we'll try to format the date.
  *
  * Format must follow the Node moment library. See: http://momentjs.com/
@@ -44,18 +46,18 @@ const cors = require('cors')({origin: true});
  */
 // [START trigger]
 exports.date = functions.https.onRequest((req, res) => {
-// [END trigger]
+  // [END trigger]
   // [START sendError]
   // Forbidding PUT requests.
   if (req.method === 'PUT') {
-    res.status(403).send('Forbidden!');
+    return res.status(403).send('Forbidden!');
   }
   // [END sendError]
 
   // [START usingMiddleware]
   // Enable CORS using the `cors` express middleware.
-  cors(req, res, () => {
-  // [END usingMiddleware]
+  return cors(req, res, () => {
+    // [END usingMiddleware]
     // Reading date format from URL query parameter.
     // [START readQueryParam]
     let format = req.query.format;

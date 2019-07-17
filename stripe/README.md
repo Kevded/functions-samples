@@ -1,6 +1,6 @@
-# Create Stripe customers and charge them on RTDB write
+# Create Stripe customers and charge them on Cloud Firestore write
 
-This sample shows how to create Stripe customers and charge them when the Realtime Database is written to.
+This sample shows how to create Stripe customers and charge them when Cloud Firestore is written to.
 
 Further reading:
  - Stripe Node API: https://stripe.com/docs/api/node
@@ -18,7 +18,8 @@ To test this integration:
  - Create a Firebase Project using the [Firebase Developer Console](https://console.firebase.google.com)
  - Enable billing on your project by switching to the Blaze or Flame plan. See [pricing](https://firebase.google.com/pricing/) for more details. This is required to be able to do requests to non-Google services.
  - [Enable Google sign on your Firebase project ](https://console.firebase.google.com/project/_/authentication/providers)
- - Configure this sample to use your project using `firebase --use add` and select your project.
+ - Install [Firebase CLI Tools](https://github.com/firebase/firebase-tools) if you have not already and log in with `firebase login`.
+ - Configure this sample to use your project using `firebase use --add` and select your project.
  - Install dependencies locally by running: `cd functions; npm install; cd -`
  - [Add your Stripe API Secret Key](https://dashboard.stripe.com/account/apikeys) to firebase config:
      ```bash

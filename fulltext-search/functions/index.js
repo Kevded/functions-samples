@@ -17,7 +17,7 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
+admin.initializeApp();
 
 // Authenticate to Algolia Database.
 // TODO: Make sure you configure the `algolia.app_id` and `algolia.api_key` Google Cloud environment variables.
@@ -28,31 +28,31 @@ const client = algoliasearch(functions.config().algolia.app_id, functions.config
 const ALGOLIA_POSTS_INDEX_NAME = 'blogposts';
 
 // Updates the search index when new blog entries are created or updated.
-exports.indexentry = functions.database.ref('/blog-posts/{blogid}/text').onWrite(event => {
-  const index = client.initIndex(ALGOLIA_POSTS_INDEX_NAME);
-  const firebaseObject = {
-    text: event.data.val(),
-    objectID: event.params.blogid
-  };
+exports.indexentry = functions.database.ref('/blog-posts/{blogid}/text').onWrite(
+    async (data, context) => {
+      const index = client.initIndex(ALGOLIA_POSTS_INDEX_NAME);
+      const firebaseObject = {
+        text: data.after.val(),
+        objectID: context.params.blogid
+      };
 
-  return index.saveObject(firebaseObject).then(
-      () => event.data.adminRef.parent.child('last_index_timestamp').set(
-          Date.parse(event.timestamp)));
-});
+      await index.saveObject(firebaseObject);
+      return data.after.ref.parent.child('last_index_timestamp').set(Date.parse(context.timestamp));
+    });
 
 // Starts a search query whenever a query is requested (by adding one to the `/search/queries`
 // element. Search results are then written under `/search/results`.
-exports.searchentry = functions.database.ref('/search/queries/{queryid}').onWrite(event => {
-  const index = client.initIndex(ALGOLIA_POSTS_INDEX_NAME);
+exports.searchentry = functions.database.ref('/search/queries/{queryid}').onCreate(
+    async (snap, context) => {
+      const index = client.initIndex(ALGOLIA_POSTS_INDEX_NAME);
 
-  const query = event.data.val().query;
-  const key = event.data.key;
+      const query = snap.val().query;
+      const key = snap.key;
 
-  return index.search(query).then(content => {
-    const updates = {
-      '/search/last_query_timestamp': Date.parse(event.timestamp)
-    };
-    updates[`/search/results/${key}`] = content;
-    return admin.database().ref().update(updates);
-  });
-});
+      const content = await index.search(query);
+      const updates = {
+        '/search/last_query_timestamp': Date.parse(context.timestamp),
+      };
+      updates[`/search/results/${key}`] = content;
+      return admin.database().ref().update(updates);
+    });

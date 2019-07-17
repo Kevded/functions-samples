@@ -18,16 +18,14 @@
 const functions = require('firebase-functions');
 
 // CORS Express middleware to enable CORS Requests.
-const cors = require('cors')({
-  origin: true
-});
+const cors = require('cors')({origin: true});
 
 // Firebase Setup
 const admin = require('firebase-admin');
 const serviceAccount = require('./service-account.json');
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: `https://${process.env.GCLOUD_PROJECT}.firebaseio.com`
+  databaseURL: `https://${process.env.GCLOUD_PROJECT}.firebaseio.com`,
 });
 
 // We use Request to make the basic authentication request in our example.
@@ -43,33 +41,27 @@ const basicAuthRequest = require('request');
  * If an error occurs log the details and return a 500 response.
  */
 exports.auth = functions.https.onRequest((req, res) => {
-
   const handleError = (username, error) => {
-    console.error({
-      User: username
-    }, error);
+    console.error({User: username}, error);
     return res.sendStatus(500);
-  }
+  };
 
   const handleResponse = (username, status, body) => {
-    console.log({
-      User: username
-    }, {
+    console.log({User: username}, {
       Response: {
         Status: status,
-        Body: body
-      }
+        Body: body,
+      },
     });
     if (body) {
       return res.status(200).json(body);
     }
     return res.sendStatus(status);
-  }
-
+  };
 
   let username = '';
   try {
-    cors(req, res, () => {
+    return cors(req, res, async () => {
       // Authentication requests are POSTed, other requests are forbidden
       if (req.method !== 'POST') {
         return handleResponse(username, 403);
@@ -84,20 +76,14 @@ exports.auth = functions.https.onRequest((req, res) => {
       }
 
       // TODO(DEVELOPER): In production you'll need to update the `authenticate` function so that it authenticates with your own credentials system.
-      authenticate(username, password).then(valid => {
-        if (!valid) {
-          return handleResponse(username, 401); // Invalid username/password
-        }
+      const valid = await authenticate(username, password)
+      if (!valid) {
+        return handleResponse(username, 401); // Invalid username/password
+      }
 
-        // On success return the Firebase Custom Auth Token.
-        return admin.auth().createCustomToken(username).then(firebaseToken => {
-          return handleResponse(username, 200, {
-            token: firebaseToken
-          });
-        });
-      }).catch(error => {
-        return handleError(username, error);
-      });
+      // On success return the Firebase Custom Auth Token.
+      const firebaseToken = await admin.auth().createCustomToken(username);
+      return handleResponse(username, 200, { token: firebaseToken });
     });
   } catch (error) {
     return handleError(username, error);
@@ -110,20 +96,19 @@ exports.auth = functions.https.onRequest((req, res) => {
  * @returns {Promise<boolean>} success or failure.
  */
 function authenticate(username, password) {
-
   // For the purpose of this example use httpbin (https://httpbin.org) and send a basic authentication request.
   // (Only a password of `Testing123` will succeed)
   const authEndpoint = `https://httpbin.org/basic-auth/${username}/Testing123`;
   const creds = {
-    'auth': {
-      'user': username,
-      'pass': password
-    }
-  }
+    auth: {
+      user: username,
+      pass: password,
+    },
+  };
   return new Promise((resolve, reject) => {
     basicAuthRequest(authEndpoint, creds, (error, response, body) => {
       if (error) {
-        return reject(error)
+        return reject(error);
       }
       const statusCode = response ? response.statusCode : 0;
       if (statusCode === 401) { // Invalid username/password

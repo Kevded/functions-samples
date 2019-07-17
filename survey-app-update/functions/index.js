@@ -17,7 +17,7 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-admin.initializeApp(functions.config().firebase);
+admin.initializeApp();
 const nodemailer = require('nodemailer');
 // Configure the email transport using the default SMTP transport and a GMail account.
 // For other types of transports such as Sendgrid see https://nodemailer.com/transports/
@@ -34,37 +34,36 @@ const LATEST_VERSION = '2.0';
 /**
  * After a user has updated the app. Send them a survey to compare the app with the old version.
  */
-exports.sendAppUpdateSurvey = functions.analytics.event('app_update').onLog(event => {
-  const uid = event.data.user.userId;
-  const appVerion = event.data.user.appInfo.appVersion;
+exports.sendAppUpdateSurvey = functions.analytics.event('app_update').onLog(async (event) => {
+  const uid = event.user.userId;
+  const appVerion = event.user.appInfo.appVersion;
 
   // Check that the user has indeed upgraded to the latest version.
   if (appVerion === LATEST_VERSION) {
     // Fetch the email of the user. In this sample we assume that the app is using Firebase Auth and
     // has set the Firebase Analytics User ID to be the same as the Firebase Auth uid using the
     // setUserId API.
-    return admin.auth().getUser(uid).then(user => {
-      const email = user.email;
-      const name = user.displayName;
-      return sendSurveyEmail(email, name);
-    });
+    const user = await admin.auth().getUser(uid);
+    const email = user.email;
+    const name = user.displayName;
+    return sendSurveyEmail(email, name);
   }
+  return null;
 });
 
 /**
  * Sends an email pointing to the Upgraded App survey.
  */
-function sendSurveyEmail(email, name) {
+async function sendSurveyEmail(email, name) {
   const mailOptions = {
     from: '"MyCoolApp" <noreply@firebase.com>',
     to: email,
     subject: 'How did you like our new app?',
     text: `Hey ${name}, We've seen that you have upgraded to the new version of our app!
            It would be awesome if you could tell us how you like it.
-           Fill out our survey: ${LINK_TO_SURVEY}`
+           Fill out our survey: ${LINK_TO_SURVEY}`,
   };
 
-  return mailTransport.sendMail(mailOptions).then(() => {
-    console.log('Upgrade App Survey email sent to:', email);
-  });
+  await mailTransport.sendMail(mailOptions);
+  console.log('Upgrade App Survey email sent to:', email);
 }

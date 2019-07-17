@@ -60,10 +60,10 @@ This deploys and activate the PubSub hello World Functions.
 
 ## Try the sample
 
-Once deployed, to try the sample use the `glcoud` CLI to publish a message to the `topic-name` topic:
+Once deployed, to try the sample use the `gcloud` CLI to publish a message to the `topic-name` topic:
 
 ```
-gcloud alpha pubsub topics publish topic-name 'YourName'
+gcloud alpha pubsub topics publish topic-name --message='YourName'
 ```
 
 Open the Functions logs in the Firebase Console, you should see a messages that reads "Hello YourName".
@@ -71,7 +71,7 @@ Open the Functions logs in the Firebase Console, you should see a messages that 
 Then you can also publish a message to the `another-topic-name` topic using JSON data:
 
 ```
-gcloud alpha pubsub topics publish another-topic-name '{"name":"YourName"}'
+gcloud alpha pubsub topics publish another-topic-name --message='{"name":"YourName"}'
 ```
 
 Open the Functions logs in the Firebase Console, you should see a messages that reads "Hello YourName".
